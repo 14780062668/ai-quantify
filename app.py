@@ -49,28 +49,28 @@ html, body, [data-testid="stAppViewContainer"] {
     radial-gradient(700px 380px at 100% 0%, rgba(180,83,9,0.08), transparent 50%),
     var(--bg);
 }
-[data-testid="stHeader"] { background: transparent; }
+[data-testid="stHeader"] { display: none; }
 #MainMenu, footer { visibility: hidden; }
 .block-container {
-  padding: 1.1rem 1rem 3.5rem !important;
+  padding: 0.7rem 1rem 3.5rem !important;
   max-width: 720px;
 }
 
 .brand {
-  display: flex; align-items: flex-end; justify-content: space-between;
-  gap: 0.75rem; margin-bottom: 1rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; margin-bottom: 0.6rem;
 }
 .brand-mark {
   font-family: "Space Grotesk", sans-serif;
-  font-weight: 700; font-size: 1.7rem; letter-spacing: -0.03em;
-  color: var(--ink); line-height: 1;
+  font-weight: 700; font-size: 1.5rem; letter-spacing: -0.03em;
+  color: var(--ink); line-height: 1.1;
 }
 .brand-mark span { color: var(--green); }
-.brand-sub { color: var(--muted); font-size: 0.82rem; margin-top: 0.35rem; }
+.brand-sub { color: var(--muted); font-size: 0.74rem; margin-top: 0.2rem; }
 .brand-chip {
-  flex-shrink: 0; font-size: 0.72rem; font-weight: 600;
+  flex-shrink: 0; font-size: 0.68rem; font-weight: 600;
   color: var(--green); background: var(--green-soft);
-  border-radius: 999px; padding: 0.35rem 0.7rem;
+  border-radius: 999px; padding: 0.28rem 0.6rem;
 }
 
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
@@ -93,9 +93,26 @@ div.stButton > button {
   width: 100%; min-height: 48px; border-radius: 12px;
   font-weight: 700; font-family: "Space Grotesk", sans-serif !important;
   letter-spacing: 0.01em;
+  padding: 0 0.5rem; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+div.stButton > button,
+div.stButton > button p {
+  color: var(--ink) !important;
 }
 div.stButton > button[kind="primary"] {
   background: var(--green) !important; border-color: var(--green) !important;
+  color: #FFFFFF !important;
+}
+div.stButton > button[kind="primary"] p,
+div.stButton > button[kind="primary"] span {
+  color: #FFFFFF !important;
+}
+/* 输入框标签可见性保险 */
+[data-testid="stNumberInput"] label,
+[data-testid="stNumberInput"] label p {
+  color: var(--ink) !important; font-size: 0.85rem !important;
+  visibility: visible !important; display: block !important;
 }
 [data-testid="stMetric"] {
   background: var(--card); border: 1px solid var(--line);
@@ -110,9 +127,9 @@ div.stButton > button[kind="primary"] {
   display: grid; grid-template-columns: 1fr; gap: 0.35rem;
   margin-bottom: 0.35rem;
 }
-.hint {
-  color: var(--muted); font-size: 0.78rem; line-height: 1.4;
-  margin: 0.15rem 0 0.75rem;
+p.hint {
+  color: #3D4A42 !important; font-size: 0.78rem !important; line-height: 1.4;
+  margin: 0.15rem 0 0.75rem; display: block !important; visibility: visible !important;
 }
 .seed-line {
   display: flex; justify-content: space-between; align-items: center;
@@ -225,15 +242,43 @@ div.stButton > button[kind="primary"] {
 }
 
 @media (max-width: 640px) {
-  .block-container { padding: 0.75rem 0.7rem 4rem !important; }
-  .brand-mark { font-size: 1.45rem; }
-  [data-testid="stHorizontalBlock"] {
-    flex-direction: column !important; gap: 0.35rem !important;
-  }
-  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
-    width: 100% !important; flex: 1 1 100% !important; min-width: 100% !important;
-  }
-  .summary-bar { grid-template-columns: 1fr; }
+  .block-container { padding: 0.55rem 0.6rem 4rem !important; }
+  .brand { margin-bottom: 0.45rem; }
+  .brand-mark { font-size: 1.3rem; }
+  /* 按钮/指标保持并排，不再强制单列堆叠；列可收缩避免按钮被裁 */
+  [data-testid="stHorizontalBlock"] { gap: 0.4rem !important; flex-wrap: nowrap !important; }
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] { min-width: 0 !important; }
+  .ticket-card { padding: 0.85rem 0.8rem 0.9rem; margin-bottom: 0.7rem; }
+  .ticket-head .tag { font-size: 1rem; }
+  .meta-grid { gap: 0.3rem; }
+  .meta-cell { padding: 0.42rem 0.5rem; border-radius: 10px; }
+  .meta-cell .k { font-size: 0.62rem; }
+  .meta-cell .v { font-size: 0.9rem; }
+  .pick-row { padding: 0.55rem 0; }
+  .pick-main .vs { font-size: 0.88rem; }
+  .pick-side .rec { font-size: 0.92rem; }
+  /* 对比表：小字号 + 横向可滚动，避免三列挤压换行 */
+  .compare-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .compare-row { min-width: 300px; font-size: 0.74rem; padding: 0.38rem 0; }
+  .summary-bar .v { font-size: 0.85rem; }
+  .why-box { font-size: 0.78rem; }
+  p.hint { font-size: 0.72rem !important; }
+  .seed-line { font-size: 0.68rem; flex-wrap: wrap; gap: 0.2rem; }
+  div.stButton > button { min-height: 46px; font-size: 0.85rem; padding: 0 0.3rem; }
+  [data-testid="stMetric"] { padding: 0.5rem 0.6rem; }
+  [data-testid="stMetricValue"] { font-size: 1.05rem !important; }
+}
+
+/* 推荐理由：手机/桌面统一可折叠，默认收起 */
+details.pick-why { margin-top: 0.35rem; }
+details.pick-why summary {
+  color: var(--green); font-size: 0.72rem; font-weight: 600;
+  cursor: pointer; list-style: none; user-select: none;
+}
+details.pick-why summary::before { content: "▸ "; }
+details.pick-why[open] summary::before { content: "▾ "; }
+details.pick-why .why-text {
+  margin-top: 0.25rem; color: var(--muted); font-size: 0.74rem; line-height: 1.45;
 }
 </style>
 """,
@@ -271,7 +316,7 @@ def _ticket_html(ticket: dict, kind: str) -> str:
               <div class="pick-main">
                 <div class="league">{meta_line}</div>
                 <div class="vs">{p['对阵']}</div>
-                <div class="pick-why">{why}</div>
+                <details class="pick-why"><summary>买入理由</summary><div class="why-text">{why}</div></details>
               </div>
               <div class="pick-side">
                 <div class="rec">{p['推荐']}</div>
@@ -317,7 +362,7 @@ def _compare_html(cmp: dict) -> str:
     return f"""
     <div class="compare-card">
       <div class="title">两单对比</div>
-      {''.join(rows)}
+      <div class="compare-scroll">{''.join(rows)}</div>
       <div class="why-box" style="margin-top:0.75rem;background:#F4F7F5;color:#1E3328">
         <div class="label">分仓逻辑</div>
         {cmp['分仓说明']}
@@ -351,6 +396,7 @@ with tab_fb:
         max_value=1000,
         value=20,
         step=2,
+        label_visibility="visible",
     )
     budget = int(budget_raw)
     if budget % 2 != 0:
@@ -434,7 +480,7 @@ with tab_stock:
         fig = px.line(result["nav"], y="nav", title="净值曲线")
         fig.update_layout(
             margin=dict(l=8, r=8, t=40, b=8),
-            height=280,
+            height=240,
             font=dict(size=12, family="DM Sans"),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
@@ -449,11 +495,11 @@ with tab_stock:
         show_fac = latest[
             ["symbol", "mom_20", "mom_60", "vol_20", "vol_ratio", "mr_20", "score"]
         ].round(4)
-        st.dataframe(show_fac, use_container_width=True, height=280)
+        st.dataframe(show_fac, use_container_width=True, height=220)
 
         st.subheader("近期交易")
         trades = result["trades"]
         if not trades.empty:
-            st.dataframe(trades.tail(30), use_container_width=True, height=260)
+            st.dataframe(trades.tail(30), use_container_width=True, height=220)
         else:
             st.info("无交易")

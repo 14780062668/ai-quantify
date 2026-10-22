@@ -19,15 +19,35 @@ def _edge(p: float, odds: float) -> float:
     return p * odds - 1.0
 
 
-def _pick_outcome(m: Match) -> tuple[str, float, float, float]:
+def _fused_prob(m: Match) -> tuple[float, float, float, bool]:
+    """胜平负去水概率 与 波胆聚合概率 50/50 融合
+
+    波胆赔率已把伤停/近况/战意定价进去，等效于基本面校准因子；
+    无波胆数据时回退纯胜平负口径。
+    """
+    pch = float(m.extra.get("p_h_crs") or 0.0)
+    pcd = float(m.extra.get("p_d_crs") or 0.0)
+    pca = float(m.extra.get("p_a_crs") or 0.0)
+    if pch + pcd + pca <= 0:
+        return m.p_h, m.p_d, m.p_a, False
+    w = 0.5
+    fh = w * m.p_h + (1 - w) * pch
+    fd = w * m.p_d + (1 - w) * pcd
+    fa = w * m.p_a + (1 - w) * pca
+    s = fh + fd + fa
+    return fh / s, fd / s, fa / s, True
+
+
+def _pick_outcome(m: Match) -> tuple[str, float, float, float, bool]:
+    ph, pd, pa, cal = _fused_prob(m)
     cands = [
-        ("主胜", m.p_h, m.odds_h),
-        ("平局", m.p_d, m.odds_d),
-        ("客胜", m.p_a, m.odds_a),
+        ("主胜", ph, m.odds_h),
+        ("平局", pd, m.odds_d),
+        ("客胜", pa, m.odds_a),
     ]
     best = max(cands, key=lambda x: _edge(x[1], x[2]))
     name, p, o = best
-    return name, p, o, _edge(p, o)
+    return name, p, o, _edge(p, o), cal
 
 
 def _combo_prob(probs: list[float]) -> float:
@@ -63,9 +83,10 @@ def _pick_reason(p: dict[str, Any]) -> str:
         ev_txt = f"期望略亏({ev:.0%})，靠概率优势压风险"
     num = p.get("编号") or ""
     num_txt = f"「{num}」" if num else ""
+    cal_txt = "概率已经波胆赔率校准（含伤停/近况定价）；" if p.get("calibrated") else ""
     return (
         f"体彩{num_txt}胜平负「{p['推荐']}」：官方赔率 {p['odds']}，"
-        f"去水分概率约 {p['prob']:.0%}，{ev_txt}；三项里该项 EV 最高，故选它。"
+        f"去水分概率约 {p['prob']:.0%}，{ev_txt}；{cal_txt}三项里该项 EV 最高，故选它。"
     )
 
 
@@ -80,8 +101,8 @@ def _ticket_why(tag: str, picks: list[dict], cp: float, co: float, ev: float) ->
             f"整单 EV={ev:+.1%}，适合压大部分预算。"
         )
     return (
-        f"串 {n} 场（{names}），综合赔率 {co:.2f}（目标 4~10 倍），命中率约 {cp:.0%}。"
-        f"逻辑是用 2~4 场控赔率区间搏超额收益；"
+        f"串 {n} 场（{names}），综合赔率 {co:.2f}（目标 3~6 倍），命中率约 {cp:.0%}。"
+        f"逻辑是用 2~3 场控赔率区间搏超额收益；"
         f"整单 EV={ev:+.1%}，适合小仓位博弹性。"
     )
 
@@ -235,12 +256,12 @@ def _pick_high_combo(
     scored: list[dict],
     rng: np.random.Generator,
     exclude_ids: set[str] | None = None,
-    odds_lo: float = 4.0,
-    odds_hi: float = 10.0,
+    odds_lo: float = 3.0,
+    odds_hi: float = 6.0,
     n_min: int = 2,
-    n_max: int = 4,
+    n_max: int = 3,
 ) -> list[dict]:
-    """高收益：2~4 场，综合赔率落在 [4, 10]"""
+    """高收益：2~3 场，综合赔率落在 [3, 6]"""
     exclude_ids = exclude_ids or set()
     pool = [x for x in scored if x["match_id"] not in exclude_ids]
     if len(pool) < n_min:
@@ -308,7 +329,7 @@ def generate_tips(
 ) -> dict[str, Any]:
     """
     稳单保本：1-2场，高概率
-    高收益：2-4场，综合赔率 4~10 倍
+    高收益：2-3场，综合赔率 3~6 倍
     赛程/赔率：体彩竞彩官方在售数据
     """
     tb = int(max(2, min(1000, float(total_budget))))
@@ -348,7 +369,7 @@ def generate_tips(
 
     scored = []
     for m in matches:
-        outcome, p, o, ev = _pick_outcome(m)
+        outcome, p, o, ev, cal = _pick_outcome(m)
         kick = " ".join(x for x in (m.match_date, m.match_time) if x).strip()
         scored.append(
             {
@@ -361,6 +382,7 @@ def generate_tips(
                 "prob": p,
                 "odds": o,
                 "ev": ev,
+                "calibrated": cal,
             }
         )
 
@@ -378,10 +400,10 @@ def generate_tips(
         scored,
         rng,
         exclude_ids={x["match_id"] for x in stable_picks},
-        odds_lo=4.0,
-        odds_hi=10.0,
+        odds_lo=3.0,
+        odds_hi=6.0,
         n_min=2,
-        n_max=4,
+        n_max=3,
     )
 
     def _fmt(picks: list[dict]) -> list[dict]:
@@ -395,6 +417,7 @@ def generate_tips(
                 "prob": x["prob"],
                 "odds": x["odds"],
                 "ev": x["ev"],
+                "calibrated": x.get("calibrated", False),
                 "概率": f"{x['prob']:.0%}",
                 "赔率": x["odds"],
                 "EV": round(x["ev"], 3),
@@ -419,7 +442,7 @@ def generate_tips(
         fmt_s, "稳单保本", "少场次、高概率，体彩胜平负", stake_s
     )
     high = _build_ticket(
-        fmt_h, "高收益", "2~4场串关，综合赔率约4~10倍，体彩胜平负", stake_h
+        fmt_h, "高收益", "2~3场串关，综合赔率约3~6倍，体彩胜平负", stake_h
     )
 
     return {

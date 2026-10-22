@@ -19,7 +19,7 @@ def _today_cn() -> str:
 
 API_URL = (
     "https://webapi.sporttery.cn/gateway/jc/football/"
-    "getMatchCalculatorV1.qry?poolCode=hhad,had&channel=c"
+    "getMatchCalculatorV1.qry?poolCode=hhad,had,crs&channel=c"
 )
 
 _HEADERS = {
@@ -52,6 +52,37 @@ def odds_to_prob(h: float, d: float, a: float) -> tuple[float, float, float]:
     return ih / s, id_ / s, ia / s
 
 
+def crs_to_prob(crs: dict) -> tuple[float, float, float]:
+    """波胆赔率聚合 → 胜/平/负概率
+
+    键格式为 "s{主队进球}s{客队进球}"（如 "s01s00"=1-0），带 f 后缀的
+    为标志位需跳过；"胜其他"等非标准键被忽略，归一化后三向比例仍有效；
+    波胆定价已包含伤停/近况信息，可作为胜平负概率的校准源。
+    """
+    ph = pd = pa = 0.0
+    for code, odds in (crs or {}).items():
+        if not (isinstance(code, str) and len(code) == 6 and code.startswith("s")):
+            continue
+        parts = code[1:].split("s")
+        if len(parts) != 2 or not all(p.isdigit() for p in parts):
+            continue
+        o = _f(odds)
+        if o <= 1:
+            continue
+        gh, ga = int(parts[0]), int(parts[1])
+        inv = 1.0 / o
+        if gh > ga:
+            ph += inv
+        elif gh == ga:
+            pd += inv
+        else:
+            pa += inv
+    s = ph + pd + pa
+    if s <= 0:
+        return 0.0, 0.0, 0.0
+    return ph / s, pd / s, pa / s
+
+
 def _parse_matches(payload: dict) -> tuple[list[Match], str]:
     """只保留体彩「当天销售日」可买场次（businessDate == 北京时间今天）"""
     value = payload.get("value") or {}
@@ -76,6 +107,7 @@ def _parse_matches(payload: dict) -> tuple[list[Match], str]:
                 if int(m.get("sellStatus") or 0) != 1:
                     continue
             ph, pd, pa = odds_to_prob(oh, od, oa)
+            pch, pcd, pca = crs_to_prob(m.get("crs") or {})
             mid = str(m.get("matchId") or m.get("matchNumStr") or len(out))
             num = str(m.get("matchNumStr") or "")
             league = str(m.get("leagueAbbName") or m.get("leagueAllName") or "")
@@ -98,6 +130,7 @@ def _parse_matches(payload: dict) -> tuple[list[Match], str]:
                     match_num=num,
                     match_date=date,
                     match_time=tm,
+                    extra={"p_h_crs": pch, "p_d_crs": pcd, "p_a_crs": pca},
                 )
             )
     return out, updated
