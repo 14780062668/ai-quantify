@@ -30,6 +30,11 @@ _HEADERS = {
     "Referer": "https://www.sporttery.cn/",
     "Origin": "https://www.sporttery.cn",
     "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    "Connection": "keep-alive",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
 }
 
 # 简易内存缓存（按销售日隔离）
@@ -158,10 +163,22 @@ def fetch_jczq_matches(force: bool = False) -> dict[str, Any]:
             "cached": True,
         }
 
+    payload = None
+    last_err: Exception | None = None
     try:
-        req = urllib.request.Request(API_URL, headers=_HEADERS)
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
+        # 体彩 WAF 偶发拦截（如 567），重试 3 次
+        for attempt in range(3):
+            try:
+                req = urllib.request.Request(API_URL, headers=_HEADERS)
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    payload = json.loads(resp.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as e:
+                last_err = e
+                if attempt < 2:
+                    time.sleep(1.5 * (attempt + 1))
+        if payload is None:
+            raise last_err or RuntimeError("接口无响应")
         if not payload.get("success"):
             raise RuntimeError(payload.get("errorMessage") or "接口返回失败")
         matches, updated = _parse_matches(payload)
