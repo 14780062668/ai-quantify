@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone, timedelta
 from typing import Any
@@ -165,11 +167,14 @@ def fetch_jczq_matches(force: bool = False) -> dict[str, Any]:
 
     payload = None
     last_err: Exception | None = None
+    # 部署环境被体彩 WAF 拦截时，经中转代理访问（本地直连不配置即可）
+    proxy = os.environ.get("SPORTTERY_PROXY", "").strip()
+    url = proxy + urllib.parse.quote(API_URL, safe="") if proxy else API_URL
     try:
         # 体彩 WAF 偶发拦截（如 567），重试 3 次
         for attempt in range(3):
             try:
-                req = urllib.request.Request(API_URL, headers=_HEADERS)
+                req = urllib.request.Request(url, headers=_HEADERS)
                 with urllib.request.urlopen(req, timeout=20) as resp:
                     payload = json.loads(resp.read().decode("utf-8"))
                 break

@@ -1,10 +1,18 @@
 """双功能入口：足球推荐 | 股票量化（手机优先）"""
 from __future__ import annotations
 
+import os
 import time
 
 import plotly.express as px
 import streamlit as st
+
+# 线上部署时从 Secrets 注入环境变量（如 SPORTTERY_PROXY）
+try:
+    for _k, _v in st.secrets.items():
+        os.environ.setdefault(str(_k), str(_v))
+except Exception:
+    pass
 
 from football.recommend import generate_tips
 from stock.backtest import run_backtest
