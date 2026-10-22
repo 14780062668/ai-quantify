@@ -15,7 +15,7 @@ from stock.strategy import FactorStrategy
 
 st.set_page_config(
     page_title="AI Quantify",
-    page_icon="AQ",
+    page_icon="⚽",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
