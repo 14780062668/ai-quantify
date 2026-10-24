@@ -31,8 +31,6 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Grotesk:wght@500;700&display=swap');
-
 :root {
   --ink: #121814;
   --muted: #5B675F;
@@ -49,7 +47,7 @@ st.markdown(
 html, body, [data-testid="stAppViewContainer"] {
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: "DM Sans", sans-serif !important;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif !important;
 }
 [data-testid="stAppViewContainer"] {
   background:
@@ -69,7 +67,7 @@ html, body, [data-testid="stAppViewContainer"] {
   gap: 0.75rem; margin-bottom: 0.6rem;
 }
 .brand-mark {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 700; font-size: 1.5rem; letter-spacing: -0.03em;
   color: var(--ink); line-height: 1.1;
 }
@@ -87,7 +85,7 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 [data-testid="stTabs"] button {
   min-height: 44px; padding: 0.45rem 0.9rem !important;
-  font-family: "Space Grotesk", sans-serif !important;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif !important;
   font-weight: 600 !important; color: var(--muted) !important;
 }
 [data-testid="stTabs"] button[aria-selected="true"] {
@@ -99,7 +97,7 @@ html, body, [data-testid="stAppViewContainer"] {
 
 div.stButton > button {
   width: 100%; min-height: 48px; border-radius: 12px;
-  font-weight: 700; font-family: "Space Grotesk", sans-serif !important;
+  font-weight: 700; font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif !important;
   letter-spacing: 0.01em;
   padding: 0 0.5rem; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
@@ -128,7 +126,7 @@ div.stButton > button[kind="primary"] span {
 }
 [data-testid="stMetricLabel"] { font-size: 0.75rem !important; color: var(--muted) !important; }
 [data-testid="stMetricValue"] {
-  font-family: "Space Grotesk", sans-serif !important; font-size: 1.2rem !important;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif !important; font-size: 1.2rem !important;
 }
 
 .toolbar {
@@ -156,7 +154,7 @@ p.hint {
   gap: 0.6rem; margin-bottom: 0.85rem;
 }
 .ticket-head .tag {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 700; font-size: 1.08rem; color: var(--ink);
 }
 .ticket-head .note { color: var(--muted); font-size: 0.78rem; margin-top: 0.2rem; }
@@ -185,7 +183,7 @@ p.hint {
 }
 .pick-side { text-align: right; }
 .pick-side .rec {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 700; font-size: 1rem; color: var(--green);
 }
 .pick-side .od { color: var(--muted); font-size: 0.78rem; margin-top: 0.15rem; }
@@ -198,7 +196,7 @@ p.hint {
 }
 .meta-cell .k { font-size: 0.68rem; color: var(--muted); }
 .meta-cell .v {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 1.02rem; font-weight: 700; margin-top: 0.1rem;
 }
 .why-box {
@@ -208,7 +206,7 @@ p.hint {
 }
 .ticket-card.high .why-box { background: var(--amber-soft); color: #3A2A16; }
 .why-box .label {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 700; font-size: 0.78rem; margin-bottom: 0.25rem;
   letter-spacing: 0.02em;
 }
@@ -218,7 +216,7 @@ p.hint {
   border-radius: var(--radius); padding: 1rem; margin-bottom: 0.5rem;
 }
 .compare-card .title {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 700; font-size: 1.05rem; margin-bottom: 0.65rem;
 }
 .compare-row {
@@ -235,7 +233,7 @@ p.hint {
   background: #F4F7F5; border-radius: 12px;
   font-size: 0.84rem; line-height: 1.45;
 }
-.verdict b { font-family: "Space Grotesk", sans-serif; }
+.verdict b { font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
 .summary-bar {
   display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.4rem;
   margin-top: 0.7rem;
@@ -245,7 +243,7 @@ p.hint {
 }
 .summary-bar .k { font-size: 0.65rem; color: var(--muted); }
 .summary-bar .v {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 700; font-size: 0.92rem; margin-top: 0.1rem;
 }
 
@@ -305,6 +303,17 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _load_universe(days: int = 504):
+    """行情与当日日期相关，缓存 1 小时"""
+    return make_universe(days=days)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _load_factors(days: int = 504):
+    return calc_factors(_load_universe(days))
+
 
 tab_fb, tab_stock = st.tabs(["足球", "股票"])
 
@@ -462,8 +471,8 @@ with tab_stock:
 
     if run:
         with st.spinner("回测中…"):
-            raw = make_universe(days=504)
-            fac = calc_factors(raw)
+            raw = _load_universe(504)
+            fac = _load_factors(504)
             last_dt = fac.index.max()
             latest = (
                 fac.loc[last_dt]
@@ -489,12 +498,12 @@ with tab_stock:
         fig.update_layout(
             margin=dict(l=8, r=8, t=40, b=8),
             height=240,
-            font=dict(size=12, family="DM Sans"),
+            font=dict(size=12, family="sans-serif"),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             xaxis_title="",
             yaxis_title="净值",
-            title_font=dict(family="Space Grotesk", size=14),
+            title_font=dict(size=14),
         )
         fig.update_traces(line_color="#146C4B", line_width=2.2)
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})

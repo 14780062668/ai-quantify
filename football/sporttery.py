@@ -171,17 +171,17 @@ def fetch_jczq_matches(force: bool = False) -> dict[str, Any]:
     proxy = os.environ.get("SPORTTERY_PROXY", "").strip()
     url = proxy + urllib.parse.quote(API_URL, safe="") if proxy else API_URL
     try:
-        # 体彩 WAF 偶发拦截（如 567），重试 3 次
-        for attempt in range(3):
+        # 体彩 WAF 偶发拦截（如 567）重试 1 次；超时压到 8s，避免页面长时间卡死
+        for attempt in range(2):
             try:
                 req = urllib.request.Request(url, headers=_HEADERS)
-                with urllib.request.urlopen(req, timeout=20) as resp:
+                with urllib.request.urlopen(req, timeout=8) as resp:
                     payload = json.loads(resp.read().decode("utf-8"))
                 break
             except urllib.error.HTTPError as e:
                 last_err = e
-                if attempt < 2:
-                    time.sleep(1.5 * (attempt + 1))
+                if attempt < 1:
+                    time.sleep(1.0)
         if payload is None:
             raise last_err or RuntimeError("接口无响应")
         if not payload.get("success"):

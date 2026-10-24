@@ -1,36 +1,46 @@
-"""因子选股策略：每日按 score 选多头，权重等权或分数加权"""
+"""因子选股策略：按 score 选多头，周频调仓，权重等权或分数加权"""
 from __future__ import annotations
 
 import pandas as pd
 
 
 class FactorStrategy:
-    def __init__(self, top_n: int = 5, weight_mode: str = "equal"):
+    def __init__(self, top_n: int = 5, weight_mode: str = "equal", rebalance: str = "W"):
         self.top_n = top_n
         self.weight_mode = weight_mode  # equal | score
+        self.rebalance = rebalance  # W=每周首个交易日调仓 | D=每日
 
     def generate_weights(self, factor_df: pd.DataFrame) -> pd.DataFrame:
-        """返回 MultiIndex(date, symbol) 的目标权重 target_w"""
-        rows = []
-        for dt, day in factor_df.groupby(level=0):
-            day = day.dropna(subset=["score"])
-            if day.empty:
-                continue
-            pick = day.nlargest(self.top_n, "score")
-            if self.weight_mode == "score":
-                s = pick["score"].clip(lower=0)
-                if s.sum() <= 0:
-                    w = pd.Series(1.0 / len(pick), index=pick["symbol"].values)
-                else:
-                    w = s / s.sum()
-                    w.index = pick["symbol"].values
-            else:
-                w = pd.Series(1.0 / len(pick), index=pick["symbol"].values)
-            for sym, weight in w.items():
-                rows.append({"date": dt, "symbol": sym, "target_w": float(weight)})
+        """返回 MultiIndex(date, symbol) 的目标权重 target_w，仅含调仓日"""
+        df = factor_df.dropna(subset=["score"])[["symbol", "score"]].copy()
+        if df.empty:
+            idx = pd.MultiIndex.from_tuples([], names=["date", "symbol"])
+            return pd.DataFrame(columns=["target_w"], index=idx)
 
-        if not rows:
-            return pd.DataFrame(columns=["date", "symbol", "target_w"]).set_index(
-                ["date", "symbol"]
-            )
-        return pd.DataFrame(rows).set_index(["date", "symbol"])
+        # 索引可能含重复日期（多票同日），先降成普通列
+        df = df.reset_index().rename(columns={factor_df.index.name or "index": "date"})
+        df = df.rename(columns={df.columns[0]: "date"})
+        df["date"] = pd.to_datetime(df["date"])
+
+        # 只保留每周（或每日）的第一个交易日作为调仓日
+        if self.rebalance == "W":
+            period = df["date"].dt.to_period("W")
+            first_days = df.groupby(period)["date"].transform("min")
+            df = df[df["date"] == first_days]
+
+        # 截面排名向量化选 top_n
+        df["rk"] = df.groupby("date")["score"].rank(ascending=False, method="first")
+        df = df[df["rk"] <= self.top_n]
+        if df.empty:
+            idx = pd.MultiIndex.from_tuples([], names=["date", "symbol"])
+            return pd.DataFrame(columns=["target_w"], index=idx)
+
+        if self.weight_mode == "score":
+            s = df["score"].clip(lower=0)
+            tot = s.groupby(df["date"]).transform("sum")
+            # 当天分数全负则回退等权
+            df["target_w"] = (s / tot.where(tot > 0)).fillna(1.0 / df.groupby("date")["symbol"].transform("count"))
+        else:
+            df["target_w"] = 1.0 / df.groupby("date")["symbol"].transform("count")
+
+        return df.set_index(["date", "symbol"])[["target_w"]].sort_index()

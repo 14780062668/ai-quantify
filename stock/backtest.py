@@ -20,7 +20,17 @@ def run_backtest(
     """
     risk = RiskManager(risk_cfg)
     closes = price_df.pivot_table(index=price_df.index, columns="symbol", values="close")
+    # pivot 后索引可能是 datetime64[us]，与权重键(ns)哈希不一致导致 get 全 miss，统一单位
+    closes.index = closes.index.as_unit("ns")
     dates = closes.index.sort_values()
+    # 预切分每日目标权重，避免循环内反复扫 MultiIndex
+    if not weight_df.empty:
+        w_by_date = {
+            dt: g.droplevel(0)["target_w"].to_dict()
+            for dt, g in weight_df.groupby(level=0)
+        }
+    else:
+        w_by_date = {}
 
     cash = init_cash
     pos: dict[str, float] = {}  # 股数
@@ -30,8 +40,15 @@ def run_backtest(
 
     for i, dt in enumerate(dates):
         px = closes.loc[dt].dropna().to_dict()
-        # 止损
-        pos = risk.apply_stop(pos, cost, px)
+        # 止损：触发即按现价卖出并记账
+        kept, stopped = risk.apply_stop(pos, cost, px)
+        for s in stopped:
+            q = pos.get(s, 0)
+            cost.pop(s, None)
+            if q > 0 and s in px:
+                cash += q * px[s] * (1 - fee_rate)
+                trades.append({"date": dt, "symbol": s, "side": "止损卖", "qty": q, "price": px[s]})
+        pos = kept
 
         # 市值
         mkt = sum(pos.get(s, 0) * px[s] for s in pos if s in px)
@@ -48,53 +65,52 @@ def run_backtest(
             mkt = 0.0
             nav = cash
 
-        # 目标权重
-        if dt in weight_df.index.get_level_values(0):
-            day_w = weight_df.xs(dt, level=0)["target_w"].to_dict()
-        else:
-            day_w = {}
-        day_w = risk.clip_weights(day_w)
+        # 目标权重：当天无调仓计划则维持原持仓
+        day_w = w_by_date.get(dt)
+        if day_w is not None:
+            day_w = risk.clip_weights(day_w)
 
-        target_val = {s: nav * w for s, w in day_w.items() if s in px}
-        # 不在目标里的持仓清掉
-        for s in list(pos.keys()):
-            if s not in target_val and s in px:
-                q = pos.pop(s)
-                cash += q * px[s] * (1 - fee_rate)
-                cost.pop(s, None)
-                trades.append({"date": dt, "symbol": s, "side": "卖", "qty": q, "price": px[s]})
-
-        for s, tv in target_val.items():
-            cur_val = pos.get(s, 0) * px[s]
-            diff = tv - cur_val
-            if abs(diff) < nav * 0.001:
-                continue
-            qty = diff / px[s]
-            if qty > 0:
-                cost_amt = qty * px[s] * (1 + fee_rate)
-                if cost_amt > cash:
-                    qty = cash / (px[s] * (1 + fee_rate))
-                    cost_amt = qty * px[s] * (1 + fee_rate)
-                if qty <= 0:
-                    continue
-                # 更新成本价
-                old_q = pos.get(s, 0)
-                old_c = cost.get(s, px[s])
-                new_q = old_q + qty
-                cost[s] = (old_q * old_c + qty * px[s]) / new_q if new_q > 0 else px[s]
-                pos[s] = new_q
-                cash -= cost_amt
-                trades.append({"date": dt, "symbol": s, "side": "买", "qty": qty, "price": px[s]})
-            else:
-                sell_q = min(-qty, pos.get(s, 0))
-                if sell_q <= 0:
-                    continue
-                cash += sell_q * px[s] * (1 - fee_rate)
-                pos[s] = pos.get(s, 0) - sell_q
-                if pos[s] <= 1e-8:
-                    pos.pop(s, None)
+            target_val = {s: nav * w for s, w in day_w.items() if s in px}
+            # 不在目标里的持仓清掉
+            for s in list(pos.keys()):
+                if s not in target_val and s in px:
+                    q = pos.pop(s)
+                    cash += q * px[s] * (1 - fee_rate)
                     cost.pop(s, None)
-                trades.append({"date": dt, "symbol": s, "side": "卖", "qty": sell_q, "price": px[s]})
+                    trades.append({"date": dt, "symbol": s, "side": "卖", "qty": q, "price": px[s]})
+
+            for s, tv in target_val.items():
+                cur_val = pos.get(s, 0) * px[s]
+                diff = tv - cur_val
+                # 偏离不足净值 1% 不折腾，压换手省手续费
+                if abs(diff) < nav * 0.01:
+                    continue
+                qty = diff / px[s]
+                if qty > 0:
+                    cost_amt = qty * px[s] * (1 + fee_rate)
+                    if cost_amt > cash:
+                        qty = cash / (px[s] * (1 + fee_rate))
+                        cost_amt = qty * px[s] * (1 + fee_rate)
+                    if qty <= 0:
+                        continue
+                    # 更新成本价
+                    old_q = pos.get(s, 0)
+                    old_c = cost.get(s, px[s])
+                    new_q = old_q + qty
+                    cost[s] = (old_q * old_c + qty * px[s]) / new_q if new_q > 0 else px[s]
+                    pos[s] = new_q
+                    cash -= cost_amt
+                    trades.append({"date": dt, "symbol": s, "side": "买", "qty": qty, "price": px[s]})
+                else:
+                    sell_q = min(-qty, pos.get(s, 0))
+                    if sell_q <= 0:
+                        continue
+                    cash += sell_q * px[s] * (1 - fee_rate)
+                    pos[s] = pos.get(s, 0) - sell_q
+                    if pos[s] <= 1e-8:
+                        pos.pop(s, None)
+                        cost.pop(s, None)
+                    trades.append({"date": dt, "symbol": s, "side": "卖", "qty": sell_q, "price": px[s]})
 
         mkt = sum(pos.get(s, 0) * px[s] for s in pos if s in px)
         nav = cash + mkt

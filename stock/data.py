@@ -11,7 +11,9 @@ def make_ohlcv(
     seed: int = 42,
     start_price: float = 50.0,
 ) -> pd.DataFrame:
-    rng = np.random.default_rng(seed + hash(symbol) % 10000)
+    # 用 zlib.crc32 替代内置 hash，避免进程间哈希盐不同导致结果不可复现
+    import zlib
+    rng = np.random.default_rng(seed + zlib.crc32(symbol.encode()) % 10000)
     dates = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=days)
 
     # 几何布朗 + 少量均值回归，贴近真实波动

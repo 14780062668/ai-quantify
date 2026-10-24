@@ -32,17 +32,19 @@ class RiskManager:
 
     def apply_stop(
         self, positions: dict[str, float], cost: dict[str, float], price: dict[str, float]
-    ) -> dict[str, float]:
-        """持仓相对成本跌破止损线则清仓"""
-        kept = {}
+    ) -> tuple[dict[str, float], list[str]]:
+        """返回 (保留持仓, 触发止损的代码列表)，由调用方按市价卖出回收现金"""
+        kept: dict[str, float] = {}
+        stopped: list[str] = []
         for sym, qty in positions.items():
             if qty <= 0 or sym not in price or sym not in cost or cost[sym] <= 0:
                 continue
             pnl = price[sym] / cost[sym] - 1.0
             if pnl <= self.cfg.stop_loss:
+                stopped.append(sym)
                 continue
             kept[sym] = qty
-        return kept
+        return kept, stopped
 
     def check_drawdown(self, nav: float) -> bool:
         """True=触发熔断，强制空仓 cool_down 天"""

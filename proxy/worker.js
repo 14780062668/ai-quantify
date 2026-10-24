@@ -9,7 +9,9 @@ export default {
       return new Response("forbidden", { status: 403 });
     }
     try {
+      // 边缘缓存 60s：Python 侧内存缓存同为 60s，重复请求直接命中 CDN
       const resp = await fetch(target, {
+        cf: { cacheTtl: 60, cacheEverything: true },
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
@@ -26,7 +28,7 @@ export default {
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           "Access-Control-Allow-Origin": "*",
-          "Cache-Control": "no-store",
+          "Cache-Control": "public, max-age=60",
         },
       });
     } catch (e) {

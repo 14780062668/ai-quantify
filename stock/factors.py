@@ -35,16 +35,19 @@ def calc_factors(df: pd.DataFrame) -> pd.DataFrame:
     ma20 = g["close"].transform(lambda x: x.rolling(20).mean())
     out["mr_20"] = (out["close"] - ma20) / ma20
 
-    # 截面标准化后加权打分
-    def _score_one_day(day: pd.DataFrame) -> pd.Series:
-        m20 = _zscore(day["mom_20"])
-        m60 = _zscore(day["mom_60"])
-        # 低波动更好：取负
-        v20 = -_zscore(day["vol_20"])
-        vr = _zscore(day["vol_ratio"])
-        # 过度上涨惩罚（均值回归）
-        mr = -_zscore(day["mr_20"])
-        return 0.30 * m20 + 0.25 * m60 + 0.20 * v20 + 0.15 * vr + 0.10 * mr
+    # 截面标准化后加权打分（cython 化的 mean/std transform，无 Python 回调）
+    def _cs_z(col: str) -> pd.Series:
+        s = out[col]
+        g = s.groupby(s.index)
+        std = g.transform("std")
+        z = (s - g.transform("mean")) / std.where(std > 0)
+        # 输入本身为 NaN（预热期）保持 NaN，让策略端丢弃；仅对零方差组填 0
+        return z.fillna(0.0).mask(s.isna())
 
-    out["score"] = out.groupby(out.index, group_keys=False).apply(_score_one_day)
+    m20 = _cs_z("mom_20")
+    m60 = _cs_z("mom_60")
+    v20 = -_cs_z("vol_20")  # 低波动更好：取负
+    vr = _cs_z("vol_ratio")
+    mr = -_cs_z("mr_20")  # 过度上涨惩罚（均值回归）
+    out["score"] = 0.30 * m20 + 0.25 * m60 + 0.20 * v20 + 0.15 * vr + 0.10 * mr
     return out
